@@ -263,12 +263,139 @@ LocatorBuilders.prototype.preciseXPath = function(xpath, e) {
   return 'xpath=' + xpath
 }
 
+LocatorBuilders.prototype.getClassWeights = function(element, depth = 0) {
+  const ignoredClasses = /(fa|icon|type|margin|padding|color|layout|flex|gap|mdc|md-.*|ng-.*|show|hide|circle|text|grow|wrap|number|odd|push|relative|absolute|^left$|^right$|font|fit|display|scroll)/i
+
+  const root = element.ownerDocument
+  const classList = [...element.classList]
+
+  const getWeights = className => {
+    let name = className
+    let selector = '.' + className
+    let weight = 1 / root.querySelectorAll(selector).length
+    return { name, selector, weight, depth, element }
+  }
+
+  const sortByWeight = (a, b) => b.weight - a.weight
+
+  const ignored = className => !className.match(ignoredClasses)
+
+  return classList
+    .filter(ignored)
+    .map(getWeights)
+    .sort(sortByWeight)
+}
+
+LocatorBuilders.prototype.getAttributeWeights = function(element, depth = 0) {
+  const ignoredAttributes = /required|nf-autofocus|id|type|href|ng-attr-href|class|style|size|width|height|stroke|aria.*|role|flex|layout|icon|hide.*|hidden|data-collapsible|disabled|color|autocomplete/i
+
+  const root = element.ownerDocument
+  const attrList = [...element.getAttributeNames()]
+
+  const getWeight = attr => {
+    let name = attr
+    let value = element.getAttribute(name)
+    let selector = `[${name}='${value}']`
+    let weight = 1 / root.querySelectorAll(selector).length
+
+    return { name, value, selector, weight, depth, element }
+  }
+
+  const sortByWeight = (a, b) => b.weight - a.weight
+
+  const ignored = attrName => !attrName.match(ignoredAttributes)
+
+  return attrList
+    .filter(ignored)
+    .map(getWeight)
+    .sort(sortByWeight)
+}
+
+LocatorBuilders.prototype.getWeights = function(element) {
+  let depth = [
+    element,
+    element.parentElement,
+    element.parentElement.parentElement,
+  ]
+
+  let weights = []
+  for (let distance = 0; distance <= depth.length; distance++) {
+    let classes = this.getClassWeights(depth[distance], distance)
+    let attributes = this.getAttributeWeights(depth[distance], distance)
+
+    console.log('getWeights', distance, classes, attributes)
+
+    weights = weights.concat(classes, attributes)
+  }
+
+  console.log(weights)
+
+  return weights.sort((a, b) => b.weight - a.weight)
+}
+
 /*
  * ===== builders =====
  */
 
 // order listed dictates priority
 // e.g., 1st listed is top priority
+
+LocatorBuilders.add('css:deep', function cssDeep(element) {
+  const weights = this.getWeights(element)
+
+  console.table(weights)
+
+  return null
+})
+
+LocatorBuilders.add('css:unique', function cssUnique(e) {
+  const attributes = this.getAttributeWeights(e)
+  const classes = this.getClassWeights(e)
+
+  const parent = {
+    attributes: this.getAttributeWeights(e.parentElement),
+    classes: this.getClassWeights(e.parentElement),
+    parent: {
+      attributes: this.getAttributeWeights(e.parentElement.parentElement),
+      classes: this.getClassWeights(e.parentElement.parentElement),
+    },
+  }
+
+  let testLocator =
+    classes.find(className => className.name.includes('test')) ||
+    attributes.find(attrName => attrName.name.includes('test')) ||
+    parent.classes.find(className => className.name.includes('test')) ||
+    parent.attributes.find(attrName => attrName.name.includes('test')) ||
+    parent.parent.classes.find(className => className.name.includes('test')) ||
+    parent.parent.attributes.find(attrName => attrName.name.includes('test')) ||
+    null
+
+  let ngLocator =
+    attributes.find(attrName => attrName.name == 'ng-click') ||
+    attributes.find(attrName => attrName.name == 'ng-model') ||
+    parent.attributes.find(attrName => attrName.name == 'ng-click') ||
+    parent.attributes.find(attrName => attrName.name == 'ng-model') ||
+    parent.parent.attributes.find(attrName => attrName.name == 'ng-click') ||
+    parent.parent.attributes.find(attrName => attrName.name == 'ng-model') ||
+    null
+
+  let locator =
+    testLocator ||
+    ngLocator ||
+    attributes.find(attrName => attrName.weight == 1) ||
+    classes.find(className => className.weight == 1) ||
+    parent.attributes.find(attrName => attrName.weight == 1) ||
+    parent.classes.find(className => className.weight == 1) ||
+    parent.parent.attributes.find(attrName => attrName.weight == 1) ||
+    parent.parent.classes.find(className => className.weight == 1) ||
+    null
+
+  if (locator) {
+    return 'css=' + locator.selector
+  }
+
+  return null
+})
 
 LocatorBuilders.add('css:data-attr', function cssDataAttr(e) {
   const dataAttributes = ['data-test', 'data-test-id']
@@ -282,12 +409,12 @@ LocatorBuilders.add('css:data-attr', function cssDataAttr(e) {
   return null
 })
 
-LocatorBuilders.add('id', function id(e) {
-  if (e.id) {
-    return 'id=' + e.id
-  }
-  return null
-})
+// LocatorBuilders.add('id', function id(e) {
+//   if (e.id) {
+//     return 'id=' + e.id
+//   }
+//   return null
+// })
 
 LocatorBuilders.add('linkText', function linkText(e) {
   if (e.nodeName == 'A') {

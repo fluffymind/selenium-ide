@@ -691,7 +691,10 @@ Selenium.prototype.doWaitForElementNotPresent = function(locator, timeout) {
   )
 }
 
-Selenium.prototype.doWaitForElementVisible = function(locator, timeout) {
+Selenium.prototype.doWaitForElementVisible = function(
+  locator,
+  timeout = 30000
+) {
   return waitUntil(
     isDisplayed.bind(this),
     locator,
@@ -700,7 +703,10 @@ Selenium.prototype.doWaitForElementVisible = function(locator, timeout) {
   )
 }
 
-Selenium.prototype.doWaitForElementNotVisible = function(locator, timeout) {
+Selenium.prototype.doWaitForElementNotVisible = function(
+  locator,
+  timeout = 30000
+) {
   return waitUntil(
     isNotDisplayed.bind(this),
     locator,
@@ -709,7 +715,10 @@ Selenium.prototype.doWaitForElementNotVisible = function(locator, timeout) {
   )
 }
 
-Selenium.prototype.doWaitForElementEditable = function(locator, timeout) {
+Selenium.prototype.doWaitForElementEditable = function(
+  locator,
+  timeout = 30000
+) {
   return waitUntil(
     isEditable.bind(this),
     locator,
@@ -718,7 +727,10 @@ Selenium.prototype.doWaitForElementEditable = function(locator, timeout) {
   )
 }
 
-Selenium.prototype.doWaitForElementNotEditable = function(locator, timeout) {
+Selenium.prototype.doWaitForElementNotEditable = function(
+  locator,
+  timeout = 30000
+) {
   return waitUntil(
     isNotEditable.bind(this),
     locator,

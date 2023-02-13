@@ -109,3 +109,32 @@ export function calculateFrameIndex(opts = {}) {
     ? opts.targetFrameIndex - 1
     : opts.targetFrameIndex
 }
+
+// Factory Function to combine multiple sort criteria
+// receives functions representing sorting criteria
+// returns a new function that applies these criteria
+function sortByMultipleCriteriaFactory(...sortFuncs) {
+  let res
+  return (it1, it2) => {
+    for (let sort of sortFuncs) {
+      res = sort(it1, it2)
+      if (res !== 0) {
+        //for this criteria items are not equal (in sorting terms) so no more criteria to apply
+        return res
+      }
+    }
+    return res
+  }
+}
+
+let sortByPopulation = (it1, it2) => {
+  return it1.population > it2.population
+    ? -1
+    : it1.population < it2.population
+      ? 1
+      : 0
+}
+
+let sortByName = (it1, it2) => {
+  return it1.name > it2.name ? -1 : it1.name < it2.name ? 1 : 0
+}
